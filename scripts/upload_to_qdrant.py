@@ -19,14 +19,29 @@ client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
 # ————————————————————————————————
 # A) Sorular & Cevaplar (Embedding + Qdrant)
 # ————————————————————————————————
-df_inst = pd.read_csv(os.path.join("..", "data", "instructions.csv"), quotechar='"')
+# CSV'yi ilk iki virgüle göre bölerek oku (her zaman 3 sütun)
+data = []
+with open(os.path.join("..", "data", "instructions.csv"), encoding="utf-8") as f:
+    header = f.readline().strip().split(",")
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split(",", 2)
+        while len(parts) < 3:
+            parts.append("")
+        data.append(parts)
+df = pd.DataFrame(data, columns=header)
+
+print(df.head())
+print(df.shape)
 
 # Kolon kontrolü
 required_cols = {"question", "answer"}
-assert required_cols.issubset(df_inst.columns), f"Eksik kolonlar: {required_cols - set(df_inst.columns)}"
+assert required_cols.issubset(df.columns), f"Eksik kolonlar: {required_cols - set(df.columns)}"
 
 # Boş veya eksik satırları atla
-filtered_rows = df_inst.dropna(subset=["question", "answer"])
+filtered_rows = df.dropna(subset=["question", "answer"])
 
 # Sadece `question` sütununu embed ediyoruz, çünkü arama bu sütuna göre yapılacak.
 inst_vectors = model.encode(filtered_rows["question"].tolist(), show_progress_bar=True)
